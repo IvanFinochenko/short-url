@@ -1,0 +1,16 @@
+version: '3.1'
+
+services:
+    short-url-service:
+        image: ivanfinochenko/short-url:0.1
+        ports:
+          - 8080:8080
+        depends_on:
+          - postgres
+
+    postgres:
+        image: postgres:9.6.16-alpine
+        environment:
+            POSTGRES_PASSWORD: password
+            POSTGRES_DB: urls
+            POSTGRES_USER: short-url-service
