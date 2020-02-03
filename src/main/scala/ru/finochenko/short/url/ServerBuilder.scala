@@ -38,6 +38,10 @@ class ServerBuilder[F[_]: ConcurrentEffect: Timer: Monad: ContextShift: Logger] 
     }
   }
 
+  /**
+   * Было бы лаконичней использовать type alias вместо `Kleisli[Resource[F, *], Config, Server[F]]`. К примеру:
+   *   type WithConfig[A] = Kleisli[Resource[F, *], Config, A]
+   */
   private def buildTransactorAndServer: Kleisli[Resource[F, *], Config, Server[F]] = {
     for {
       _          <- migrate()

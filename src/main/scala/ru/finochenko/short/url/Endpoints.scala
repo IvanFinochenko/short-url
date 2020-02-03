@@ -23,6 +23,10 @@ object Endpoints {
       .description("Get a short url or generate new short url if it doesn't exist")
       .in(jsonBody[RequestOriginalUrl])
       .errorOut(jsonBody[ParseFailure])
+      /**
+       * FIXME !!! В задании предполагалось, что укороченная ссылка будет возвращать в виде URL, по которому можно перейти.
+       * FIXME !!! В текущей реализации возвращается только часть итогово URL-а.
+       */
       .out(jsonBody[ResponseShortUrl])
 
 }
