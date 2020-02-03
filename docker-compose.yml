@@ -3,6 +3,10 @@ version: '3.1'
 services:
     short-url-service:
         image: ivanfinochenko/short-url:0.1
+        environment:
+            DATABASE_URL: jdbc:postgresql://postgres:5432/urls
+            DATABASE_USER: short-url-service
+            DATABASE_PASSWORD: password
         ports:
           - 8080:8080
         depends_on:

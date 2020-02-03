@@ -1,10 +1,10 @@
 package ru.finochenko.short.url.dao
 
 import cats.effect.Bracket
-import cats.implicits._
 import doobie.implicits._
+import doobie.util.Read
 import doobie.util.transactor.Transactor
-import ru.finochenko.short.url.model.{OriginalUrl, ShortUrl}
+import ru.finochenko.short.url.model.Urls.{OriginalUrl, ShortUrl}
 
 trait UrlsDao[F[_]] {
 
@@ -17,6 +17,8 @@ trait UrlsDao[F[_]] {
 }
 
 class UrlsDaoImpl[F[_]](transactor: Transactor[F])(implicit bracket:Bracket[F, Throwable]) extends UrlsDao[F] {
+  implicit val originalUrlRead: Read[OriginalUrl] = Read[String].map(OriginalUrl(_))
+  implicit val shortUrlRead: Read[ShortUrl] = Read[String].map(ShortUrl(_))
   override def queryShortUrl(originalUrl: OriginalUrl): F[Option[ShortUrl]] = {
     sql"SELECT short_url FROM short_original_urls WHERE original_url = ${originalUrl.value}"
         .query[ShortUrl]
@@ -37,6 +39,7 @@ class UrlsDaoImpl[F[_]](transactor: Transactor[F])(implicit bracket:Bracket[F, T
         .run
         .transact(transactor)
   }
+
 }
 
 object UrlsDaoImpl {

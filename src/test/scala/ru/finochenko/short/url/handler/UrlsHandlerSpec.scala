@@ -6,7 +6,8 @@ import monix.eval.Coeval
 import org.http4s.ParseFailure
 import org.scalatest.{FlatSpec, Matchers}
 import ru.finochenko.short.url.dao.UrlsDao
-import ru.finochenko.short.url.model.{OriginalUrl, OriginalUrlIsNotExist, ShortUrl}
+import ru.finochenko.short.url.model.OriginalUrlIsNotExist
+import ru.finochenko.short.url.model.Urls.{OriginalUrl, ShortUrl}
 
 class UrlsHandlerSpec extends FlatSpec with Matchers {
 

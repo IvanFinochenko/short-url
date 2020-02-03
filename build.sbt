@@ -15,6 +15,7 @@ val testcontainersVersion = "0.35.0"
 val flywayVersion = "6.2.1"
 val scalaTestVersion = "3.0.8"
 val http4sVerion = "0.21.0-RC2"
+val newtypeVersion = "0.4.3"
 
 libraryDependencies ++= Seq(
   "io.monix" %% "monix-eval" % monixVersion,
@@ -34,10 +35,13 @@ libraryDependencies ++= Seq(
   "io.chrisdavenport" %% "log4cats-core" % log4catsVersion,
   "io.chrisdavenport" %% "log4cats-slf4j" % log4catsVersion,
   "org.flywaydb" % "flyway-core" % flywayVersion,
+  "io.estatico" %% "newtype" % newtypeVersion,
   "com.dimafeng" %% "testcontainers-scala-scalatest" % testcontainersVersion % Test,
   "com.dimafeng" %% "testcontainers-scala-postgresql" % testcontainersVersion % Test,
   "org.scalatest" %% "scalatest" % scalaTestVersion % Test
 )
+
+scalacOptions ++= Seq("-Ymacro-annotations")
 
 addCompilerPlugin("org.typelevel" %% "kind-projector" % "0.11.0" cross CrossVersion.full)
 

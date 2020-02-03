@@ -20,12 +20,14 @@ import sttp.tapir.swagger.http4s.SwaggerHttp4s
 
 class ServerBuilder[F[_]: ConcurrentEffect: Timer: Monad: ContextShift: Logger] {
 
+  type WithConfig[A] = Kleisli[Resource[F, *], Config, A]
+
   def build(): F[ExitCode] = {
 
     Config.load[F].flatMap { errorsOrConfig =>
       errorsOrConfig.fold(
         { errors =>
-          Logger[F].error(errors.toList.mkString(", ")) *> ConcurrentEffect[F].pure(ExitCode.Error)
+          Logger[F].error(errors) *> ConcurrentEffect[F].pure(ExitCode.Error)
         },
         { config =>
           buildTransactorAndServer
@@ -38,11 +40,7 @@ class ServerBuilder[F[_]: ConcurrentEffect: Timer: Monad: ContextShift: Logger] 
     }
   }
 
-  /**
-   * Было бы лаконичней использовать type alias вместо `Kleisli[Resource[F, *], Config, Server[F]]`. К примеру:
-   *   type WithConfig[A] = Kleisli[Resource[F, *], Config, A]
-   */
-  private def buildTransactorAndServer: Kleisli[Resource[F, *], Config, Server[F]] = {
+  private def buildTransactorAndServer: WithConfig[Server[F]] = {
     for {
       _          <- migrate()
       transactor <- buildTransactor
@@ -50,24 +48,24 @@ class ServerBuilder[F[_]: ConcurrentEffect: Timer: Monad: ContextShift: Logger] 
     } yield server
   }
 
-  private def migrate(): Kleisli[Resource[F, *], Config, Unit] = {
+  private def migrate(): WithConfig[Unit] = {
     Kleisli { config =>
       val migrateAndLog = for {
         migration <- Migration[F]
-        successMigrations <- migration.migrate(config.database)
+        successMigrations <- migration.migrate(config.dbConnection)
         _ <- Logger[F].info(s"Successful migrations = $successMigrations")
       } yield () -> Applicative[F].unit
       Resource(migrateAndLog)
     }
   }
 
-  private def buildServer(transactor: Transactor[F]): Kleisli[Resource[F, *], Config, Server[F]] = {
+  private def buildServer(transactor: Transactor[F]): WithConfig[Server[F]] = {
     Kleisli { config =>
       val docs = List(Endpoints.getShortUrl, Endpoints.redirect).toOpenAPI("Docs short-url", "1.0.0")
       val swaggerDocs = new SwaggerHttp4s(docs.toYaml).routes
       val shortUrlDao = UrlsDaoImpl[F](transactor)
       val logic = UrlsHandler[F](shortUrlDao)
-      val services = Routes[F](logic).services
+      val services = Routes[F](logic, config.server).services
       val allRoutes = (swaggerDocs <+> services).orNotFound
       BlazeServerBuilder[F]
           .bindHttp(config.server.port, config.server.host)
@@ -76,16 +74,16 @@ class ServerBuilder[F[_]: ConcurrentEffect: Timer: Monad: ContextShift: Logger] 
     }
   }
 
-  private def buildTransactor: Kleisli[Resource[F, *], Config, Transactor[F]] = {
+  private def buildTransactor: WithConfig[Transactor[F]] = {
     Kleisli { config =>
       for {
         blocker <- Blocker[F]
         executionContext <- ExecutionContexts.fixedThreadPool[F](10)
         transactor <- HikariTransactor.newHikariTransactor[F](
           config.database.driver,
-          config.database.url,
-          config.database.user,
-          config.database.password,
+          config.dbConnection.url,
+          config.dbConnection.user,
+          config.dbConnection.password,
           executionContext,
           blocker
         )

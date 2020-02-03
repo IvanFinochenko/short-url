@@ -15,7 +15,7 @@ import org.http4s.{Header, Method, Request, Uri}
 import org.scalatest.{FlatSpec, Matchers}
 import ru.finochenko.short.url.dao.UrlsDaoImpl
 import ru.finochenko.short.url.handler.UrlsHandler
-import ru.finochenko.short.url.model.{DataBaseConfig, RequestOriginalUrl, ResponseShortUrl}
+import ru.finochenko.short.url.model.{DataBaseConnection, RequestOriginalUrl, ResponseShortUrl, ServerConfig}
 
 import scala.concurrent.duration._
 
@@ -24,6 +24,7 @@ class IntegrationSpec extends FlatSpec with Matchers with ForAllTestContainer {
   implicit val scheduler: Scheduler = Scheduler(Executors.newSingleThreadExecutor())
 
   private val timeout = 10.second
+  private val server = ServerConfig("localhost", 8080)
 
   override val container: PostgreSQLContainer = PostgreSQLContainer("postgres:9.6.16")
 
@@ -33,14 +34,14 @@ class IntegrationSpec extends FlatSpec with Matchers with ForAllTestContainer {
     )
     val dao = UrlsDaoImpl[Task](transactor)
     val handler = UrlsHandler[Task](dao)
-    Routes[Task](handler).services.orNotFound
+    Routes[Task](handler, server).services.orNotFound
   }
 
   override def afterStart(): Unit = {
-    val dbConfig = DataBaseConfig(container.driverClassName, container.jdbcUrl, container.username, container.password)
+    val dbConnection = DataBaseConnection(container.jdbcUrl, container.username, container.password)
     val migrate = for {
       migration <- Migration[Task]
-      _         <- migration.migrate(dbConfig)
+      _         <- migration.migrate(dbConnection)
     } yield ()
     migrate.runSyncUnsafe(timeout)
   }
@@ -66,12 +67,18 @@ class IntegrationSpec extends FlatSpec with Matchers with ForAllTestContainer {
       routes            <- buildRoutes
       generatedShortUrl <- routes.run(request)
       responseShortUrl  <- generatedShortUrl.as[ResponseShortUrl]
-      requestRedirect   = Request[Task](uri = Uri(path = s"/${responseShortUrl.shortUrl}"))
+      requestRedirect   = Request[Task](uri = Uri(path = s"${extractShortUrl(responseShortUrl)}"))
       redirectResponse  <- routes.run(requestRedirect)
     } yield  redirectResponse
     val expectedHeader = Header("Location", requestOriginalUrl.originalUrl)
     val headers = response.runSyncUnsafe(timeout).headers.toList
     headers should contain(expectedHeader)
+  }
+
+  private def extractShortUrl(responseShortUrl: ResponseShortUrl): String = {
+    responseShortUrl.shortUrl.substring(
+      responseShortUrl.shortUrl.lastIndexOf(s"${server.port}") + server.port.toString.length
+    )
   }
 
 }
