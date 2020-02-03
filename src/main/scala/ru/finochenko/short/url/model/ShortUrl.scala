@@ -22,6 +22,13 @@ object ShortUrl {
     generateBySymbol(chars.toVector, 10, "").map(ShortUrl(_))
   }
 
+  /**
+   * Решение выглядит странным.
+   * - Рекурсия кажется явно лишней. Можно было обойтись без неё:
+   *   просто генерить всю строку целиком, и её уже возвращать в эффекте;
+   * - Параметры `chars` и `n` тоже выглядят излинишними. В контексте задачи
+   *   можно было просто завести соответствующие констнанты.
+   */
   private def generateBySymbol[F[_]: Sync](chars: Vector[Char], n: Int, shortUrl: String): F[String] = {
     if (n <= 0) {
       shortUrl.pure[F]

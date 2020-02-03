@@ -20,6 +20,9 @@ class UrlsHandler[F[_]: Sync](shortUrlDao: UrlsDao[F]) {
     )
   }
 
+  /**
+   * TODO Если случится так, что генератор выдаст сокращенный URL, уже существующий в БД, что будет?
+   */
   private def generateAndSaveShortUrl(originalUrl: OriginalUrl): F[ShortUrl] = {
     for {
       shortUrl <- ShortUrl.generate[F]
@@ -27,6 +30,9 @@ class UrlsHandler[F[_]: Sync](shortUrlDao: UrlsDao[F]) {
     } yield shortUrl
   }
 
+  /**
+   * FIXME Unused!!!
+   */
   def validateAndFindOriginalUrl(shortUrl: ShortUrl): F[Either[RedirectError, OriginalUrl]] = {
     val errorOrOriginalUrl = for {
       validShortUrl <- EitherT(validateShortUrl(shortUrl).pure[F])
@@ -42,6 +48,9 @@ class UrlsHandler[F[_]: Sync](shortUrlDao: UrlsDao[F]) {
     }
   }
 
+  /**
+   * FIXME Unused!!!
+   */
   private def validateShortUrl(shortUrl: ShortUrl): Either[RedirectError, ShortUrl] = {
     shortUrl.some
         .filter(url => ShortUrl.regularExpression.r.pattern.matcher(url.value).matches())
